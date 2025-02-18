@@ -1,0 +1,111 @@
+specification {
+    element person {
+        style {
+            shape person
+            color green
+        }
+    }
+    element softwareSystem
+    element container
+    element component
+}
+
+model {
+  user = person "Пользователь" "Пользователь социальной сети LL"
+
+  LL = softwareSystem "LL" {
+    apiGateway = container "API Gateway" {
+      description "Маршрутизация запросов и управление доступом"
+      technology "Node.js, Express"
+    }
+
+    webapp = container "Веб-соцсеть" "Предоставляет интерфейс LL" "JavaScript, React"
+
+    userService = container "User Service" {
+      description "Управление пользователями и аутентификация"
+      technology "Python | C++"
+      
+      component userController "User Controller" "Обрабатывает HTTP запросы"
+      component authService "Auth Service" "Управляет аутентификацией"
+      component userServiceComponent "User Service" "Управляет данными пользователей"
+      component userRepository "User Repository" "Доступ к данным пользователей"
+      component kafkaProducer "Kafka Producer" "Отправляет события пользователей"
+      component grpcService "gRPC Service" "Предоставляет gRPC API"
+    }
+
+    statService = container "Statistics Service" {
+      description "Подсчет лайков, просмотров, комментариев"
+      technology "Python | С++"
+    }
+
+    postAndCommentsService = container "Posts And Comments Service" {
+        description "Создание, обновление, удаление постов и комментариев"
+        technology "Python | C++"
+    }
+
+    UsersDB = container "UsersDB" {
+      description "Хранение данных пользователей"
+      technology "Postgres"
+      style {
+        shape cylinder
+      }
+    }
+
+    PostsDB = container "PostsDB" {
+      description "Хранение постов и комментариев"
+      technology "Postgres"
+      style {
+        shape cylinder
+      }
+    }
+
+    StatisticsDB = container "StatisticsDB" {
+      description "Хранение данных для подсчета статистики"
+      technology "ClickHouse | Postgres"
+      style {
+        shape cylinder
+      }
+    }
+
+    redis = container "Redis" {
+      description "Кэширование и хранение сессий"
+      technology "In-memory data store"
+    }
+
+    kafka = container "Kafka" {
+      description "Обмен событиями между сервисами"
+      technology "Message Broker"
+      style {
+        shape queue
+      }
+    }
+  }
+
+  user -> LL.apiGateway "Использует" "HTTPS"
+  LL.apiGateway -> LL.webapp "Перенаправляет" "HTTPS"
+  LL.apiGateway -> LL.userService "Маршрутизирует" "JSON/HTTPS"
+  LL.apiGateway -> LL.statService "Маршрутизирует" "JSON/HTTPS"
+  LL.apiGateway -> LL.postAndCommentsService "Маршрутизирует" "JSON/HTTPS"
+
+  LL.userService -> LL.UsersDB "Читает/Пишет" "Postgres Protocol"
+  LL.postAndCommentsService -> LL.PostsDB "Читает/Пишет" "Postgres Protocol"
+  LL.statService -> LL.StatisticsDB "Читает/Пишет" "CQL"
+  LL.apiGateway -> LL.redis "Кэширует" "Redis Protocol"
+
+  LL.postAndCommentsService -> LL.kafka "Публикует/Лайкает/Просматривает/Комментирует" "posts_events"
+
+  LL.kafka -> LL.statService "Публикует/Лайкает/Просматривает/Комментирует" "posts_events"
+
+  LL.userService.userController -> LL.userService.authService "Использует"
+  LL.userService.userController -> LL.userService.userServiceComponent "Использует"
+  LL.userService.authService -> LL.userService.userServiceComponent "Использует"
+  LL.userService.userServiceComponent -> LL.userService.userRepository "Использует"
+  LL.userService.userServiceComponent -> LL.userService.kafkaProducer "Использует"
+  LL.userService.grpcService -> LL.userService.userServiceComponent "Использует"
+}
+
+views {
+   view index {
+        include *
+    }
+}
