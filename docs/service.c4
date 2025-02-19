@@ -30,7 +30,6 @@ model {
       component userServiceComponent "User Service" "Управляет данными пользователей"
       component userRepository "User Repository" "Доступ к данным пользователей"
       component kafkaProducer "Kafka Producer" "Отправляет события пользователей"
-      component grpcService "gRPC Service" "Предоставляет gRPC API"
     }
 
     statService = container "Statistics Service" {
@@ -101,7 +100,6 @@ model {
   LL.userService.authService -> LL.userService.userServiceComponent "Использует"
   LL.userService.userServiceComponent -> LL.userService.userRepository "Использует"
   LL.userService.userServiceComponent -> LL.userService.kafkaProducer "Использует"
-  LL.userService.grpcService -> LL.userService.userServiceComponent "Использует"
 }
 
 views {
