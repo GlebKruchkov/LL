@@ -2,6 +2,7 @@
 'User Service
 class User {
   + id: int
+  + role_id: int
   + nickname: string
   + email: string
   + phone: string
@@ -30,29 +31,40 @@ class Role {
 class Post {
   + id: int
   + userId: int
-  + discription: string
-  + image: string
+  + description: string
   + creationDate: datetime
   + likes: int
   + views: int
   + deleted: bool
 }
 
+class Media {
+  + id: int
+  + postId: int
+  + userId: int
+  + url: string
+  + type: string  ' image, video, gif и т.д.
+  + creationDate: datetime
+  + deleted: bool
+}
+
+
 class Comment {
   + id: int
   + postId: int
   + userId: int
+  + parentId: int?
   + text: string
   + creation_date: datetime
   + deleted: bool
 }
+
 
 class Like {
   + id: int
   + postId: int
   + userId: int
   + creationDate: datetime
-  + deleted: bool
 }
 
 'Statistics Service
@@ -87,6 +99,9 @@ User "1" --* "0..*" Post : создает
 User "1" --* "0..*" Comment : оставляет
 User "1" --* "0..*" Like : ставит
 Post "1" --* "0..*" Comment : содержит
+Comment "0..*" -- "0..1" Comment : parent
+Post "1" --* "0..*" Media : содержит
+User "1" --* "0..*" Media : загружает
 Post "1" --* "0..*" Like : имеет
 Post "1" --* "1" PostStatistics : имеет
 User "1" --* "1" UserStatistics : имеет

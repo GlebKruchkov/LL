@@ -80,8 +80,8 @@ model {
     }
   }
 
-  user -> LL.apiGateway "Использует" "HTTPS"
-  LL.apiGateway -> LL.webapp "Перенаправляет" "HTTPS"
+  user -> LL.webapp "Взаимодействует" "HTTPS"
+  LL.webapp -> LL.apiGateway "Использует" "HTTPS"
   LL.apiGateway -> LL.userService "Маршрутизирует" "JSON/HTTPS"
   LL.apiGateway -> LL.statService "Маршрутизирует" "JSON/HTTPS"
   LL.apiGateway -> LL.postAndCommentsService "Маршрутизирует" "JSON/HTTPS"
