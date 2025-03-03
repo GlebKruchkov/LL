@@ -1,0 +1,110 @@
+@startuml LL
+'User Service
+class User {
+  + id: int
+  + role_id: int
+  + nickname: string
+  + email: string
+  + phone: string
+  + password: string
+  + birthday: datetime
+  + status: string
+}
+
+class Session {
+  + id: int
+  + userId: int
+  + token: string
+  + creationDate: datetime
+  + expirationDate: datetime
+}
+
+class Role {
+  + id: int
+  + name: string
+  + discription: string
+  + creationDate: string
+  + deleted: bool
+}
+
+'Posts And Comments Service
+class Post {
+  + id: int
+  + userId: int
+  + description: string
+  + creationDate: datetime
+  + likes: int
+  + views: int
+  + deleted: bool
+}
+
+class Media {
+  + id: int
+  + postId: int
+  + userId: int
+  + url: string
+  + type: string  ' image, video, gif и т.д.
+  + creationDate: datetime
+  + deleted: bool
+}
+
+
+class Comment {
+  + id: int
+  + postId: int
+  + userId: int
+  + parentId: int?
+  + text: string
+  + creation_date: datetime
+  + deleted: bool
+}
+
+
+class Like {
+  + id: int
+  + postId: int
+  + userId: int
+  + creationDate: datetime
+}
+
+'Statistics Service
+class PostStatistics {
+    + id: int
+    + postId: int
+    + popularityIndex: int
+    + likes: int
+    + views: int
+    + updateDate: datetime
+}
+
+class UserStatistics {
+    + id: int
+    + userId: int
+    + popularityIndex: int
+    + profileViews: int
+    + wasBanned: bool
+}
+
+class ActionLog {
+  + id: int
+  + userId: int
+  + action: string
+  + actionDate: datetime
+  + ipAddress: string
+}
+
+User "1" --* "0..*" Session : имеет
+User "1" --* "0..*" Role : имеет
+User "1" --* "0..*" Post : создает
+User "1" --* "0..*" Comment : оставляет
+User "1" --* "0..*" Like : ставит
+Post "1" --* "0..*" Comment : содержит
+Comment "0..*" -- "0..1" Comment : parent
+Post "1" --* "0..*" Media : содержит
+User "1" --* "0..*" Media : загружает
+Post "1" --* "0..*" Like : имеет
+Post "1" --* "1" PostStatistics : имеет
+User "1" --* "1" UserStatistics : имеет
+User "1" --* "0..*" ActionLog : выполняет
+
+@enduml
