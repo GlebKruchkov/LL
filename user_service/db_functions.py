@@ -4,6 +4,22 @@ from datetime import datetime
 conn = DBConnection()
 
 
+def cleanup_database():
+    with conn.cursor() as cur:
+        cur.execute("""
+            SELECT EXISTS (
+                SELECT FROM information_schema.tables 
+                WHERE table_name = 'users'
+            );
+        """)
+        table_exists = cur.fetchone()[0]
+
+        if table_exists:
+            cur.execute("DELETE FROM users;")
+            conn.commit()
+
+
+
 def is_nickname_unique(nickname):
     with conn.cursor() as cur:
         query = "SELECT id FROM users WHERE nickname = %s;"
