@@ -45,11 +45,26 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-  tests:
+  user_tests:
     build: ./user_service
     depends_on:
       - db
       - user_service
+    environment:
+      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_HOST=db
+      - DB_PORT=${DB_PORT}
+    command: >
+      sh -c "python -m pytest tests/"
+    networks:
+      - my_network
+  
+  api_tests:
+    build: ./api_service
+    depends_on:
+      - api_service
     environment:
       - DB_NAME=${DB_NAME}
       - DB_USER=${DB_USER}

@@ -1,7 +1,7 @@
 import pytest
 from flask import Flask
 from api.get_profile import get_profile_blueprint
-from db_functions import insert_into_users, create_table_users
+from db_functions import insert_into_users, create_table_users, cleanup_database
 
 @pytest.fixture
 def app():
@@ -13,6 +13,10 @@ def app():
 @pytest.fixture
 def client(app):
     return app.test_client()
+
+@pytest.fixture(autouse=True)
+def cleanup_db():
+    cleanup_database()
 
 def test_get_profile_success(client):
     create_table_users()
