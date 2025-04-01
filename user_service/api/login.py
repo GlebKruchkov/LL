@@ -1,5 +1,9 @@
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../user_service")))
+from helpers import create_access_token
 from flask import Blueprint, request, jsonify, abort, make_response
-from db_functions import get_user_by_login, create_table_users
+from db_functions import get_user_by_login, create_table_users, update_user_auth_token
 
 login_blueprint = Blueprint('login', __name__)
 
@@ -21,5 +25,11 @@ def login():
     user = get_user_by_login(login)
     if not user or user[2] != password:
         return make_response(jsonify({"error": "Invalid login or password"}), 400)
+    
+    auth_token = create_access_token(data={"sub": login})
 
-    return make_response(jsonify({"message": "Login successful"}), 200)
+    return make_response(jsonify({
+        "message": "Login successful",
+        "user_id": user[0],
+        "auth_token": auth_token
+    }), 200)

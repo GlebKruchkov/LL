@@ -53,6 +53,7 @@ def create_table_users():
                 nickname TEXT NOT NULL,
                 date_of_birth DATE NOT NULL,
                 phone_number TEXT NOT NULL,
+                auth_token TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
@@ -88,6 +89,18 @@ def get_user_by_nickname(nickname):
         cur.execute(query, (nickname,))
         user = cur.fetchone()
         return user
+
+
+def update_user_auth_token(user_id, auth_token):
+    with conn.cursor() as cur:
+        query = """
+            UPDATE users
+            SET auth_token = %s,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = %s
+        """
+        cur.execute(query, (auth_token, user_id))
+        conn.commit()
 
 
 def update_user_profile(current_nickname, new_nickname, date_of_birth, phone_number):
