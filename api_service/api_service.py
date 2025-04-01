@@ -2,6 +2,7 @@ from flask import Flask
 from flask_swagger_ui import get_swaggerui_blueprint
 from api.auth import auth_blueprint
 from api.profile import profile_blueprint
+from api.post import post_blueprint
 
 app = Flask(__name__)
 
@@ -20,6 +21,7 @@ swaggerui_blueprint = get_swaggerui_blueprint(
 app.register_blueprint(swaggerui_blueprint, url_prefix=SWAGGER_URL)
 app.register_blueprint(auth_blueprint)
 app.register_blueprint(profile_blueprint)
+app.register_blueprint(post_blueprint)
 
 USER_SERVICE_URL = "http://user_service:5000"
 

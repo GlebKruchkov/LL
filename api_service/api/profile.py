@@ -20,3 +20,22 @@ def get_profile(nickname):
         return jsonify(response.json()), response.status_code
     except requests.exceptions.JSONDecodeError:
         return response.text, response.status_code
+
+@profile_blueprint.route('/api/v1/users/verify', methods=['GET'])
+def verify():
+    headers = {'X-Auth-Token': request.headers.get('X-Auth-Token', '')}
+    response = requests.get(
+        f"{USER_SERVICE_URL}/api/v1/users/verify",
+        headers=headers
+    )
+    return jsonify(response.json()), response.status_code
+
+@profile_blueprint.route('/api/v1/logout', methods=['POST'])
+def logout():
+    headers = {'X-User-Id': request.headers.get('X-User-Id', '')}
+    response = requests.post(
+        f"{USER_SERVICE_URL}/api/v1/logout",
+        headers=headers
+    )
+
+    return jsonify(response.json()), response.status_code

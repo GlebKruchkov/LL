@@ -1,12 +1,31 @@
 services:
+  post_and_comments_service:
+    build: ./post_and_comments_service
+    ports:
+      - "50051:50051"
+    depends_on:
+      post_db:
+        condition: service_healthy
+    environment:
+      - DB_NAME=${POST_DB_NAME}
+      - DB_USER=${POST_DB_USER}
+      - DB_PASSWORD=${POST_DB_PASSWORD}
+      - DB_HOST=${POST_DB_HOST}
+      - DB_PORT=${POST_DB_PORT}
+    networks:
+      - my_network
   api_service:
-    build: ./api_service
+    build:
+      context: .
+      dockerfile: api_service/Dockerfile
     ports:
       - "8000:8000"
     depends_on:
+      - post_and_comments_service
       - user_service
     environment:
       - USER_SERVICE_URL=http://user_service:5000
+      - POST_SERVICE_GRPC_URL=post_and_comments_service:50051
     networks:
       - my_network
 
@@ -15,47 +34,68 @@ services:
     ports:
       - "5000:5000"
     depends_on:
-      db:
+      user_db:
         condition: service_healthy
     environment:
-      - DB_NAME=${DB_NAME}
-      - DB_USER=${DB_USER}
-      - DB_PASSWORD=${DB_PASSWORD}
-      - DB_HOST=${DB_HOST}
-      - DB_PORT=${DB_PORT}
+      - DB_NAME=${USER_DB_NAME}
+      - DB_USER=${USER_DB_USER}
+      - DB_PASSWORD=${USER_DB_PASSWORD}
+      - DB_HOST=${USER_DB_HOST}
+      - DB_PORT=${USER_DB_PORT}
     networks:
       - my_network
-
-  db:
+    
+  user_db:
     image: postgres:latest
-    container_name: postgres_db
+    container_name: user_postgres_db
     restart: always
     environment:
-      POSTGRES_DB: ${DB_NAME}
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${USER_DB_NAME}
+      POSTGRES_USER: ${USER_DB_USER}
+      POSTGRES_PASSWORD: ${USER_DB_PASSWORD}
     ports:
       - "5432:5432"
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - user_pgdata:/var/lib/postgresql/data
     networks:
       - my_network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      test: ["CMD-SHELL", "pg_isready -U ${USER_DB_USER} -d ${USER_DB_NAME}"]
       interval: 10s
       timeout: 5s
       retries: 5
+
+  post_db:
+    image: postgres:latest
+    container_name: post_postgres_db
+    restart: always
+    environment:
+      POSTGRES_DB: ${POST_DB_NAME}
+      POSTGRES_USER: ${POST_DB_USER}
+      POSTGRES_PASSWORD: ${POST_DB_PASSWORD}
+    ports:
+      - "5433:5432"
+    volumes:
+      - post_pgdata:/var/lib/postgresql/data
+    networks:
+      - my_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POST_DB_USER} -d ${POST_DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   user_tests:
     build: ./user_service
     depends_on:
-      - db
+      - user_db
       - user_service
     environment:
-      - DB_NAME=${DB_NAME}
-      - DB_USER=${DB_USER}
-      - DB_PASSWORD=${DB_PASSWORD}
-      - DB_HOST=db
-      - DB_PORT=${DB_PORT}
+      - DB_NAME=${USER_DB_NAME}
+      - DB_USER=${USER_DB_USER}
+      - DB_PASSWORD=${USER_DB_PASSWORD}
+      - DB_HOST=user_db
+      - DB_PORT=${USER_DB_PORT}
     command: >
       sh -c "python -m pytest tests/"
     networks:
@@ -66,19 +106,34 @@ services:
     depends_on:
       - api_service
     environment:
-      - DB_NAME=${DB_NAME}
-      - DB_USER=${DB_USER}
-      - DB_PASSWORD=${DB_PASSWORD}
-      - DB_HOST=db
-      - DB_PORT=${DB_PORT}
+      - DB_NAME=${USER_DB_NAME}
+      - DB_USER=${USER_DB_USER}
+      - DB_PASSWORD=${USER_DB_PASSWORD}
+      - DB_HOST=user_db
+      - DB_PORT=${USER_DB_PORT}
+    command: >
+      sh -c "python -m pytest tests/"
+    networks:
+      - my_network
+  
+  post_and_comments_tests:
+    build: ./post_and_comments_service
+    depends_on:
+      - post_and_comments_service
+    environment:
+      - DB_NAME=${POST_DB_NAME}
+      - DB_USER=${POST_DB_USER}
+      - DB_PASSWORD=${POST_DB_PASSWORD}
+      - DB_HOST=${POST_DB_HOST}
+      - DB_PORT=${POST_DB_PORT}
     command: >
       sh -c "python -m pytest tests/"
     networks:
       - my_network
 
-
 volumes:
-  pgdata:
+  user_pgdata:
+  post_pgdata:
 
 networks:
   my_network:
