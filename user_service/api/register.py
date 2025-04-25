@@ -1,5 +1,8 @@
 from flask import Blueprint, make_response, request, jsonify, abort
 import re
+from kafka import KafkaProducer
+import json
+from datetime import datetime
 from db_functions import (
     create_table_users,
     insert_into_users,
@@ -9,6 +12,19 @@ from db_functions import (
 )
 
 register_blueprint = Blueprint('register', __name__)
+
+kafka_producer = KafkaProducer(
+        bootstrap_servers=['kafka:9092'],
+        value_serializer=lambda v: json.dumps(v).encode('utf-8')
+    )
+
+def send_kafka_event(topic: str, event_type: str, data: dict):
+    event = {
+        "event_type": event_type,
+        "timestamp": datetime.now().isoformat(),
+        "data": data
+    }
+    kafka_producer.send(topic, value=event)
 
 def is_email_valid(email):
     return "@" in email
@@ -56,6 +72,15 @@ def register():
                                       "It must be at least 8 characters long, contain a digit,"
                                       "an uppercase letter, and a special character."}), 400)
 
-    insert_into_users(login, password, email, nickname, date_of_birth, phone_number)
+    id = insert_into_users(login, password, email, nickname, date_of_birth, phone_number)
+
+    send_kafka_event(
+        topic="register_users",
+        event_type="registered_users",
+        data={
+            "client_id": id,
+            "nickname": nickname
+        }
+    )
 
     return make_response(jsonify({"message": "User registered successfully"}), 200)
