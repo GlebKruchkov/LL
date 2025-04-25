@@ -185,3 +185,96 @@ def list_posts():
         }), 200
     except grpc.RpcError as e:
         return jsonify({"error": e.details()}), e.code()
+
+@post_blueprint.route('/api/v1/posts/<post_id>/view', methods=['POST'])
+@auth_required
+def track_post_view(post_id):
+    stub = get_grpc_stub()
+    
+    try:
+        response = stub.TrackPostView(
+            post_service_pb2.TrackPostViewRequest(
+                post_id=post_id,
+                user_id=request.user_id
+            )
+        )
+        return jsonify({
+            "view_id": response.view_id,
+            "message": "Post view tracked successfully"
+        }), 200
+    except grpc.RpcError as e:
+        return jsonify({"error": e.details()}), e.code()
+
+@post_blueprint.route('/api/v1/posts/<post_id>/like', methods=['POST'])
+@auth_required
+def like_post(post_id):
+    stub = get_grpc_stub()
+    
+    try:
+        response = stub.LikePost(
+            post_service_pb2.LikePostRequest(
+                post_id=post_id,
+                user_id=request.user_id
+            )
+        )
+        return jsonify({
+            "success": response.success,
+            "message": "Post liked successfully" if response.success else "Post already liked"
+        }), 200
+    except grpc.RpcError as e:
+        return jsonify({"error": e.details()}), e.code()
+
+@post_blueprint.route('/api/v1/posts/<post_id>/comments', methods=['POST'])
+@auth_required
+def create_comment(post_id):
+    data = request.json
+    stub = get_grpc_stub()
+    
+    try:
+        response = stub.CreateComment(
+            post_service_pb2.CreateCommentRequest(
+                post_id=post_id,
+                user_id=request.user_id,
+                content=data.get('content', '')
+            )
+        )
+        return jsonify({
+            "comment_id": response.comment_id,
+            "message": "Comment created successfully"
+        }), 200
+    except grpc.RpcError as e:
+        return jsonify({"error": e.details()}), e.code()
+
+@post_blueprint.route('/api/v1/posts/<post_id>/comments', methods=['GET'])
+@auth_required
+def list_comments(post_id):
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 10, type=int)
+    stub = get_grpc_stub()
+    
+    try:
+        response = stub.ListComments(
+            post_service_pb2.ListCommentsRequest(
+                post_id=post_id,
+                page=page,
+                per_page=per_page
+            )
+        )
+        
+        comments = [{
+            "id": comment.id,
+            "post_id": comment.post_id,
+            "user_id": comment.user_id,
+            "content": comment.content,
+            "created_at": comment.created_at,
+            "updated_at": comment.updated_at
+        } for comment in response.comments]
+        
+        return jsonify({
+            "comments": comments,
+            "total": response.total,
+            "page": page,
+            "per_page": per_page
+        }), 200
+    except grpc.RpcError as e:
+        return jsonify({"error": e.details()}), e.code()
