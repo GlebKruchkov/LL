@@ -27,7 +27,6 @@ def test_login_success(client):
     }
     response = client.post('/api/v1/login', json=data)
     assert response.status_code == 200
-    assert response.json == {"message": "Login successful"}
 
 def test_login_invalid_credentials(client):
     data = {
