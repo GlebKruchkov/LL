@@ -2,16 +2,39 @@ from concurrent import futures
 import grpc
 import post_service_pb2
 import post_service_pb2_grpc
+from kafka import KafkaProducer
+import json
+from datetime import datetime
+
 from db_functions import (
-    create_posts_table,
+    create_tables,
     create_post,
     update_post,
     delete_post,
     get_post,
-    list_posts
+    list_posts,
+    track_post_view,
+    like_post,
+    create_comment,
+    list_comments
 )
 
 class PostService(post_service_pb2_grpc.PostServiceServicer):
+    def __init__(self):
+        self.kafka_producer = KafkaProducer(
+            bootstrap_servers=['kafka:9092'],
+            value_serializer=lambda v: json.dumps(v).encode('utf-8')
+        )
+    
+    def _send_kafka_event(self, topic: str, event_type: str, data: dict):
+        event = {
+            "event_type": event_type,
+            "timestamp": datetime.now().isoformat(),
+            "data": data
+        }
+        self.kafka_producer.send(topic, value=event)
+    
+
     def CreatePost(self, request, context):
         try:
             post_id = create_post(
@@ -118,9 +141,106 @@ class PostService(post_service_pb2_grpc.PostServiceServicer):
             context.set_code(grpc.StatusCode.INTERNAL)
             context.set_details(str(e))
             return post_service_pb2.ListPostsResponse()
+    def TrackPostView(self, request, context):
+        try:
+            view_id = track_post_view(
+                post_id=request.post_id,
+                user_id=request.user_id
+            )
+            
+            self._send_kafka_event(
+                topic="post_views",
+                event_type="post_viewed",
+                data={
+                    "view_id": view_id,
+                    "post_id": request.post_id,
+                    "user_id": request.user_id
+                }
+            )
+            
+            return post_service_pb2.TrackPostViewResponse(view_id=view_id)
+        except Exception as e:
+            context.set_code(grpc.StatusCode.INTERNAL)
+            context.set_details(str(e))
+            return post_service_pb2.TrackPostViewResponse()
+
+    def LikePost(self, request, context):
+        try:
+            success = like_post(
+                post_id=request.post_id,
+                user_id=request.user_id
+            )
+            
+            if success:
+                self._send_kafka_event(
+                    topic="post_likes",
+                    event_type="post_liked",
+                    data={
+                        "post_id": request.post_id,
+                        "user_id": request.user_id
+                    }
+                )
+            
+            return post_service_pb2.LikePostResponse(success=success)
+        except Exception as e:
+            context.set_code(grpc.StatusCode.INTERNAL)
+            context.set_details(str(e))
+            return post_service_pb2.LikePostResponse(success=False)
+
+    def CreateComment(self, request, context):
+        try:
+            comment_id = create_comment(
+                post_id=request.post_id,
+                user_id=request.user_id,
+                content=request.content
+            )
+            
+            self._send_kafka_event(
+                topic="post_comments",
+                event_type="comment_created",
+                data={
+                    "comment_id": comment_id,
+                    "post_id": request.post_id,
+                    "user_id": request.user_id
+                }
+            )
+            
+            return post_service_pb2.CreateCommentResponse(comment_id=comment_id)
+        except Exception as e:
+            context.set_code(grpc.StatusCode.INTERNAL)
+            context.set_details(str(e))
+            return post_service_pb2.CreateCommentResponse()
+
+    def ListComments(self, request, context):
+        try:
+            comments, total = list_comments(
+                post_id=request.post_id,
+                page=request.page,
+                per_page=request.per_page
+            )
+            
+            response_comments = []
+            for comment in comments:
+                response_comments.append(post_service_pb2.Comment(
+                    id=comment["id"],
+                    post_id=comment["post_id"],
+                    user_id=comment["user_id"],
+                    content=comment["content"],
+                    created_at=comment["created_at"].isoformat(),
+                    updated_at=comment["updated_at"].isoformat()
+                ))
+            
+            return post_service_pb2.ListCommentsResponse(
+                comments=response_comments,
+                total=total
+            )
+        except Exception as e:
+            context.set_code(grpc.StatusCode.INTERNAL)
+            context.set_details(str(e))
+            return post_service_pb2.ListCommentsResponse()
 
 def serve():
-    create_posts_table()
+    create_tables()
     
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     post_service_pb2_grpc.add_PostServiceServicer_to_server(PostService(), server)
